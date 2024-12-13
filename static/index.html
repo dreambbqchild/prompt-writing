@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Prompt Writing</title>
+        <link rel="stylesheet" href="style/main.css">
+    </head>
+    <body class="fill-screen">
+        <section class="popup position-relative">
+            <div class="fill-screen position-absolute">
+                <div class="red-box pad">
+                    <div class="yellow-box pad">
+                        <header>Add New Prompt</header>
+                        <section>
+                            <div><input class="new-prompt" type="text" size="80"/></div>
+                            <div class="flex-row pad-top">
+                                <input class="flex-grow add-prompt" type="button" value="Add"/>
+                                <input class="flex-grow close-popup" type="button" value="Done"/>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="body fill-parent flex-column">
+            <header>Prompt Writing</header>
+            <section class="pad flex-grow">
+                <div class="red-box fill-parent pad">
+                    <div class="yellow-box fill-parent pad flex-column">
+                        <div class="session-config flex-row">
+                            <input type="button" value="Add Prompt..." class="open-popup"></input>
+                            <input type="range" min="1" max="15" step="1" class="flex-grow" value="1"/>
+                            <input type="button" value="Start!"></input>
+                        </div>
+                        <div class="session-state flex-row">
+                            <div class="prompt flex-grow">Prompt: <span></span></div>
+                            <div class="timer">Timer: <span></span></div>
+                        </div>
+                        <hr class="w-100"/>
+                        <textarea class="flex-grow"></textarea>
+                    </div>
+                </div>
+            </section>   
+        </section>     
+        <script>            
+            window.onload = () => {
+                const timer = document.querySelector('.timer span');
+                const range = document.querySelector('input[type="range"]');
+                const popup = document.querySelector('.popup');
+                const newPrompt = document.querySelector('.new-prompt');
+                const cmdOpenPopup = document.querySelector('.open-popup');
+                const cmdAddPrompt = document.querySelector('.add-prompt');
+                const cmdClosePopup = document.querySelector('.close-popup');
+
+                function setTimerElementValue(totalSeconds) {
+                    let minutePart = (parseInt(totalSeconds / 60)).toString().padStart(2, '0');
+                    let secondsPart = (totalSeconds % 60).toString().padStart(2, '0');
+                    timer.textContent = `${minutePart}:${secondsPart}`;
+                }
+                
+                let lastSecs = -1;
+                const evtSource = new EventSource("/session/testing/countdown");                
+                evtSource.onmessage = (event) => {
+                    let {data} = event;
+                    if(data >= 0 && lastSecs !== data) {                    
+                        setTimerElementValue(data);
+                        lastSecs = data;
+                    }
+                };
+
+                cmdOpenPopup.addEventListener('click', () => {
+                    popup.classList.add('show');
+                });
+
+                cmdAddPrompt.addEventListener('click', async () => {
+                    newPrompt.value = newPrompt.value.trim();
+                    if(!newPrompt.value)
+                        return;
+
+                    await fetch("/prompts/add", {
+                        method: 'PUT',
+                        body: new URLSearchParams({
+                            text: newPrompt.value
+                        })
+                    });
+
+                    newPrompt.value = '';
+                    newPrompt.focus();
+                });
+
+                cmdClosePopup.addEventListener('click', () => {
+                    popup.classList.remove('show');
+                });
+
+                range.addEventListener('input', () => {
+                    setTimerElementValue(range.value * 60);
+                });
+
+                setTimerElementValue(range.value * 60);
+            };
+
+            async function startTimer() {
+                const response = await fetch("/session/testing/start", {
+                    method: 'PUT',
+                    body: new URLSearchParams({
+                        seconds: 60 * 5
+                    })
+                });
+
+                if(response.data)
+                    console.log(response.data);
+            }
+        </script>
+    </body>
+</html>
