@@ -3,11 +3,18 @@ use axum::{
 };
 use chrono::Utc;
 
-use std::{convert::Infallible, time::Duration};
+use core::time;
+use std::{convert::Infallible, thread, time::Duration};
 use tokio_stream::StreamExt as _ ;
 use futures_util::stream::{self, Stream};
 
 use super::{app_state::AppState, forms::SessionStartForm};
+
+fn delay_to_next_full_second() {
+    let ms: u64 = (Utc::now().timestamp_millis() % 1000).try_into().unwrap();
+    let ms_to_next_full_second = time::Duration::from_millis(1000 - ms);
+    thread::sleep(ms_to_next_full_second);
+}
 
 pub(crate) async fn countdown_handler(state: State<AppState>, Path(key): Path<String>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let stream = stream::repeat_with(move || {
@@ -15,11 +22,14 @@ pub(crate) async fn countdown_handler(state: State<AppState>, Path(key): Path<St
             let now = Utc::now();
             let to_go = (end_at - now).num_seconds().max(-1);
 
+            delay_to_next_full_second();
+
             Event::default().data(format!("{to_go}"))
         })
         .map(Ok)
-        .throttle(Duration::from_secs(1));
+        .throttle(Duration::from_millis(750));
 
+    delay_to_next_full_second();
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 

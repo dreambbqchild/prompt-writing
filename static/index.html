@@ -13,8 +13,8 @@
                         <section>
                             <div><input class="new-prompt" type="text" size="80"/></div>
                             <div class="flex-row pad-top">
-                                <input class="flex-grow add-prompt" type="button" value="Add"/>
-                                <input class="flex-grow close-popup" type="button" value="Done"/>
+                                <input class="flex-grow add-prompt margin-right-half" type="button" value="Add"/>
+                                <input class="flex-grow close-popup margin-left-half" type="button" value="Done"/>
                             </div>
                         </section>
                     </div>
@@ -28,9 +28,13 @@
                     <div class="yellow-box fill-parent pad flex-column">
                         <div class="session-config flex-row">
                             <input type="button" value="Add Prompt..." class="open-popup"></input>
-                            <input type="range" min="1" max="15" step="1" class="flex-grow" value="1"/>
-                            <input type="button" value="Start!"></input>
+                            <div class="margin-left-right flex-grow flex-row">
+                                <span>Time Limit: </span>
+                                <input type="range" min="1" max="15" step="1" class="flex-grow" value="1"/>
+                            </div>
+                            <input type="button" value="Start!" class="start-session"></input>
                         </div>
+                        <hr class="w-100"/>
                         <div class="session-state flex-row">
                             <div class="prompt flex-grow">Prompt: <span></span></div>
                             <div class="timer">Timer: <span></span></div>
@@ -41,15 +45,25 @@
                 </div>
             </section>   
         </section>     
-        <script>            
+        <script>
+
+            const get = fetch;
+
+            const put = (url, obj) => fetch(url, {
+                method: 'PUT',
+                body: new URLSearchParams(obj)
+            });
+
             window.onload = () => {
                 const timer = document.querySelector('.timer span');
+                const prompt = document.querySelector('.prompt span');
                 const range = document.querySelector('input[type="range"]');
                 const popup = document.querySelector('.popup');
                 const newPrompt = document.querySelector('.new-prompt');
                 const cmdOpenPopup = document.querySelector('.open-popup');
                 const cmdAddPrompt = document.querySelector('.add-prompt');
                 const cmdClosePopup = document.querySelector('.close-popup');
+                const cmdStartSession = document.querySelector('.start-session');
 
                 function setTimerElementValue(totalSeconds) {
                     let minutePart = (parseInt(totalSeconds / 60)).toString().padStart(2, '0');
@@ -59,9 +73,15 @@
                 
                 let lastSecs = -1;
                 const evtSource = new EventSource("/session/testing/countdown");                
-                evtSource.onmessage = (event) => {
+                evtSource.onmessage = async (event) => {
                     let {data} = event;
-                    if(data >= 0 && lastSecs !== data) {                    
+                    if(data >= 0 && lastSecs !== data) {
+                        
+                        if(data > lastSecs) {
+                            const response = await get('/session/testing/prompt');
+                            prompt.textContent = await response.text();
+                        }                        
+                        
                         setTimerElementValue(data);
                         lastSecs = data;
                     }
@@ -76,11 +96,8 @@
                     if(!newPrompt.value)
                         return;
 
-                    await fetch("/prompts/add", {
-                        method: 'PUT',
-                        body: new URLSearchParams({
-                            text: newPrompt.value
-                        })
+                    await put("/prompts/add", {
+                        text: newPrompt.value
                     });
 
                     newPrompt.value = '';
@@ -95,20 +112,14 @@
                     setTimerElementValue(range.value * 60);
                 });
 
+                cmdStartSession.addEventListener('click', async () => {
+                    await put('/session/testing/start', {
+                        seconds: range.value * 60
+                    })
+                })
+
                 setTimerElementValue(range.value * 60);
             };
-
-            async function startTimer() {
-                const response = await fetch("/session/testing/start", {
-                    method: 'PUT',
-                    body: new URLSearchParams({
-                        seconds: 60 * 5
-                    })
-                });
-
-                if(response.data)
-                    console.log(response.data);
-            }
         </script>
     </body>
 </html>

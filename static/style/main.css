@@ -64,8 +64,28 @@ button, input[type='button'] {
     flex-direction: row;
 }
 
+.margin-left-half {
+    margin-left: 0.5em;
+}
+
+.margin-left-right {
+    margin: 0em 1em;
+}
+
+.margin-right {
+    margin-right: 1em;
+}
+
+.margin-right-half {
+    margin-right: 0.5em;
+}
+
 .pad {
     padding: 1em;
+}
+
+.pad-left {
+    padding-left: 1em;
 }
 
 .pad-top {
@@ -103,7 +123,7 @@ button, input[type='button'] {
     box-shadow: 0.25em 0.25em 0.25em var(--semi-opaque-black);
 }
 
-.session-state {
+.session-state, .session-config {
     font-size: 1.5em;
 }
 
